@@ -4,18 +4,32 @@ from sklearn.cluster import KMeans
 from hidden_markov_model import *
 
 def main():
-    '''modify this part accordingly'''
+    ''' modify this part accordingly '''
     train_path = 'train_data'
     test_path = 'test_data'
     N = 10 # num of hidden states
     M = 30 # num of observation classes
+    # initialization
+    PI = np.zeros(N)
+    PI[0] = 1
+    # transition
+    A = np.random.uniform(size=(N, N))
+    A = np.tril(A, k=0) # take lower triangle, allow model to stay or go right
+    A /= np.sum(A, axis=0)
+    # emission
+    B = np.random.uniform(size=(M, N))
+    B /= np.sum(B, axis=0)
+    # hmm training params
+    max_iter = 100
+    tol = 0.01
 
     # feature extraction and clustering
     raw = load_data(train_path)
-    # TODO: extract data?
+    # TODO: extract more features?
     cluster = cluster_data(raw, M, test = False)
 
     # train hmm
+    hmm_train(A, B, PI, max_iter, tol, cluster)
 
     # test hmm
 
