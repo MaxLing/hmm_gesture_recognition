@@ -13,13 +13,21 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
         for i in range(max_iter):
             gamma = np.zeros(N)
             xi = np.zeros((N, N))
-            likelihood = np.zeros(len(obs_seqs))
+            log_likelihood = np.zeros(len(obs_seqs))
 
             for idx, obs in enumerate(obs_seqs):
-                # E-step
-                alpha, beta, P = forward_backward(obs, A, B, PI) # alpha, beta is in log space
+                ## E-step
+                # params in log space: alpha, beta, P, gamma, xi
+                alpha, beta, P = forward_backward(obs, A, B, PI)
+                log_likelihood[idx] = P
                 gamma = smoothing(alpha, beta)
-                xi = pair_states(alpha, beta, A, B)
+                xi = pair_states(alpha, beta, A, B, obs)
+
+            mean_log_likelihood = np.mean(log_likelihood)
+            print(gesture, '\tIteration: ', i+1, '\tAverage log-likelihood: ', mean_log_likelihood)
+
+            ## M-step
+            
 
 
 
@@ -37,7 +45,7 @@ def forward_backward(obs, A, B, PI):
     for t in range(T-1):
         alpha[t+1] = logsumexp(alpha[t]+log(A), axis=1) + log(B[obs[t+1]])
     # termination, compute likelihood
-    P = np.sum(np.exp(alpha[T-1]))
+    P = np.sum(alpha[T-1])
 
     # Backward procedure
     # init
@@ -47,13 +55,29 @@ def forward_backward(obs, A, B, PI):
     for t in range(T-2, -1, -1):
         beta[t] = logsumexp(beta[t+1]+log(A.T)+log(B[obs[t+1]]), axis=1)
     # termination, for debug purpose
-    Q = np.sum(np.exp(beta[0]+log(PI)))
+    Q = np.sum(beta[0]+log(PI))
 
     print(P==Q)
     return alpha, beta, P
 
 def smoothing(alpha, beta):
+    T, N = alpha.shape
+    gamma = np.zeros((T,N))
 
-def pair_states(alpha, beta, A, B):
+    for t in range(T):
+        gamma[t] = alpha[t] + beta[t]
+    gamma -= logsumexp(gamma, axis=1) # normalization
 
-def log_baum_welch(observations):
+    return gamma
+
+def pair_states(alpha, beta, A, B, obs):
+    T, N = alpha.shape
+    xi = np.zeros((N, N, T-1))
+
+    for t in range(T-1):
+        xi[:, :, t] = alpha[t]+log(A)+log(B[obs[t+1]])+beta[t+1]
+    xi -= logsumexp(xi, axis=2) # normalization
+
+    return xi
+
+# def log_baum_welch(observations):
