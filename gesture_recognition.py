@@ -10,17 +10,16 @@ def main():
     N = 10 # num of hidden states
     M = 30 # num of observation classes
     # initialization
-    PI = np.zeros(N)
-    PI[0] = 1
+    PI = np.ones(N)/N
     # transition
-    A = np.random.uniform(size=(N, N))
+    A = np.random.uniform(low=0.1, high=1, size=(N, N))
     A = np.tril(A, k=0) # take lower triangle, allow model to stay or go right
     A /= np.sum(A, axis=0)
     # emission
-    B = np.random.uniform(size=(M, N))
+    B = np.random.uniform(low=0.1, high=1, size=(M, N))
     B /= np.sum(B, axis=0)
     # hmm training params
-    max_iter = 100
+    max_iter = 10
     tol = 0.01
 
     # feature extraction and clustering
