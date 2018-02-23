@@ -8,7 +8,7 @@ def main():
     TRAIN = False
     PREDICT = True
     train_path = 'train_data'
-    test_path = 'test_data'
+    test_path = 'train_data'
 
     if TRAIN:
         N = 10 # num of hidden states

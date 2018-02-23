@@ -62,7 +62,7 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
             PI -= logsumexp(PI)
 
             # check covergence
-            if last_log_likelihood is not None and abs(all_log_likelihood - last_log_likelihood) < tol*K:
+            if last_log_likelihood is not None and abs(all_log_likelihood - last_log_likelihood) < tol:
                 break
             last_log_likelihood = np.sum(log_likelihood)
 
