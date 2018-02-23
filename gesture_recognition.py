@@ -19,8 +19,8 @@ def main():
     B = np.random.uniform(low=0.1, high=1, size=(M, N))
     B /= np.sum(B, axis=0)
     # hmm training params
-    max_iter = 10
-    tol = 0.01
+    max_iter = 50
+    tol = 10
 
     # feature extraction and clustering
     raw = load_data(train_path)
