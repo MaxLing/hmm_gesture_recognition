@@ -5,34 +5,39 @@ from hidden_markov_model import *
 
 def main():
     ''' modify this part accordingly '''
+    NEW_MODEL = False
     train_path = 'train_data'
     test_path = 'test_data'
-    N = 10 # num of hidden states
-    M = 30 # num of observation classes
-    # initialization
-    PI = np.ones(N)/N
-    # transition
-    A = np.random.uniform(low=0.1, high=1, size=(N, N))
-    A = np.tril(A, k=0) # take lower triangle, allow model to stay or go right
-    A /= np.sum(A, axis=0)
-    # emission
-    B = np.random.uniform(low=0.1, high=1, size=(M, N))
-    B /= np.sum(B, axis=0)
-    # hmm training params
-    max_iter = 50
-    tol = 10
 
-    # feature extraction and clustering
-    raw = load_data(train_path)
-    # TODO: extract more features?
-    cluster = cluster_data(raw, M, test = False)
+    if NEW_MODEL:
+        N = 10 # num of hidden states
+        M = 30 # num of observation classes
+        # initialization
+        PI = np.ones(N)/N
+        # transition
+        A = np.random.uniform(low=0.1, high=1, size=(N, N))
+        A = np.tril(A, k=0) # take lower triangle, allow model to stay or go right
+        A /= np.sum(A, axis=0)
+        # emission
+        B = np.random.uniform(low=0.1, high=1, size=(M, N))
+        B /= np.sum(B, axis=0)
+        # hmm training params
+        max_iter = 50
+        tol = 0.1
 
-    # train hmm
-    hmm_train(A, B, PI, max_iter, tol, cluster)
+        # feature extraction and clustering
+        raw = load_data(train_path)
+        # TODO: extract more features?
+        k_means(raw, M)
+        cluster = cluster_data(raw)
 
-    # test hmm
+        # train hmm
+        hmm_train(A, B, PI, max_iter, tol, cluster)
 
-    print(0)
+    # predict
+    raw = load_data(test_path)
+    cluster = cluster_data(raw)
+    hmm_predict(cluster)
 
 def load_data(path):
     data = {}
@@ -52,26 +57,51 @@ def load_data(path):
     data['gestures'] = gestures
     return data
 
-def cluster_data(data, K, test):
-    if not test: # K-means on train data
-        all_data = np.array([])
-        for idx, key in enumerate(data):
-            if key is 'gestures':
-                continue
-            if idx == 0:
-                all_data = data[key]
-            all_data = np.vstack((all_data,data[key]))
-        kmeans = KMeans(n_clusters=K).fit(all_data)
-        pickle.dump(kmeans, open("K_means.p", "wb"))
-    else:  # load K-means from train data
-        kmeans = pickle.load(open("K_means.p", "rb"))
+def k_means(data, K):
+    # K-means on train data
+    all_data = np.array([])
+    for idx, key in enumerate(data):
+        if key is 'gestures':
+            continue
+        if idx == 0:
+            all_data = data[key]
+        all_data = np.vstack((all_data,data[key]))
+    kmeans = KMeans(n_clusters=K).fit(all_data)
+    pickle.dump(kmeans, open("k_means.p", "wb"))
+    return
+
+def cluster_data(data):
+    kmeans = pickle.load(open("k_means.p", "rb"))
     # cluster observation classes
     for key, value in data.items():
         if key is 'gestures':
             continue
         data[key] = kmeans.predict(value)
-
     return data
+
+def hmm_predict(data):
+    hmm_models = pickle.load(open("hmm_models.p", "rb"))
+    gestures = hmm_models.keys()
+    filenames = [key for key in data.keys() if key is not 'gestures']
+    log_likelihood = np.zeros((len(filenames),len(gestures)))
+    for j, gesture in enumerate(gestures):
+        # extract params
+        prior = hmm_models[gesture]['prior']
+        transition = hmm_models[gesture]['transition']
+        emission = hmm_models[gesture]['emission']
+
+        for i, filename in enumerate(filenames):
+            obs = data[filename]
+            _, _, P = forward_backward(obs, transition, emission, prior)
+            log_likelihood[i,j] = P
+
+    # TODO: fix prediction, all likelihood is -inf
+    prediction = gestures[np.argmax(log_likelihood, axis=1)]
+    print('Instances: ', filenames, '\nPrediction: ', prediction)
+
+    # test accuracy
+    accuracy = np.sum(prediction in filenames)/len(filenames)
+    print('test accuracy: ' ,accuracy)
 
 
 

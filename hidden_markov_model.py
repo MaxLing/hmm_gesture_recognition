@@ -2,6 +2,7 @@
 Note: HMM calculation is in log space to prevent underflow
 '''
 import numpy as np
+import pickle
 from scipy.special import logsumexp
 
 def hmm_train(trans, emiss, init, max_iter, tol, data):
@@ -38,7 +39,7 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
                     try:
                         obs_st[m] = logsumexp(gamma[:, obs == m], axis=1)
                     except ValueError: # no observation m in sequence
-                        obs_st[m] = np.log(np.zeros(N))
+                        obs_st[m] = np.full(N, -np.inf)
                 all_obs_st.append(obs_st)
 
             all_log_likelihood = np.sum(log_likelihood)
@@ -59,16 +60,16 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
             B -= logsumexp(B, axis=0)
             PI -= logsumexp(PI)
 
-        # check covergence
-        if last_log_likelihood is not None and abs(all_log_likelihood - last_log_likelihood) < tol:
-            break
-        last_log_likelihood = np.sum(log_likelihood)
+            # check covergence
+            if last_log_likelihood is not None and abs(all_log_likelihood - last_log_likelihood) < tol:
+                break
+            last_log_likelihood = np.sum(log_likelihood)
 
         # save hmm parameters under right gesture
         hmm_models[gesture] = {'prior': PI, 'transition': A, 'emission': B}
 
     # save the whole model
-    np.save('hmm_models.npy', hmm_models)
+    pickle.dump(hmm_models, open("hmm_models.p", "wb"))
 
 def forward_backward(obs, A, B, PI):
     M, N = B.shape
@@ -116,7 +117,6 @@ def pair_states(alpha, beta, A, B, obs):
     for t in range(T-1):
         xi[:, :, t] = alpha[t].reshape((1,-1)) + A + B[obs[t+1]].reshape((-1,1)) + beta[t+1].reshape((-1,1))
     xi -= logsumexp(xi, axis=2).reshape((N,N,1)) # normalization
-
+    xi[np.isnan(xi)] = -np.inf # replace nan with -inf, triu
     return xi
 
-# def baum_welch(observations):
