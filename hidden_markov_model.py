@@ -13,6 +13,7 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
         B = np.log(emiss)
         PI = np.log(init)
         obs_seqs = [data[key] for key in data.keys() if gesture in key] # multiple observation sequences
+        K = len(obs_seqs)
 
         last_log_likelihood = None
         for i in range(max_iter):
@@ -20,7 +21,7 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
             all_gamma = []
             all_xi = []
             all_obs_st = []
-            log_likelihood = np.zeros(len(obs_seqs))
+            log_likelihood = np.zeros(K)
 
             for idx, obs in enumerate(obs_seqs):
                 ## E-step
@@ -43,7 +44,7 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
                 all_obs_st.append(obs_st)
 
             all_log_likelihood = np.sum(log_likelihood)
-            print(gesture, '\tIteration: ', i+1, '\tlog-likelihood: ', all_log_likelihood)
+            print(gesture, '\tIteration: ', i+1, '\tlog-likelihood: ', all_log_likelihood, '\tall: ', log_likelihood)
 
             first_gamma_sum = logsumexp(np.array(first_gamma), axis=0)
             gamma_sum = logsumexp(np.array(all_gamma), axis=0).reshape((1,-1))
@@ -54,14 +55,14 @@ def hmm_train(trans, emiss, init, max_iter, tol, data):
             # reestimate parameters that best fit inferred distribution
             A = xi_sum - gamma_sum
             B = obs_st_sum - gamma_sum
-            PI = first_gamma_sum - np.log(len(obs_seqs))
+            PI = first_gamma_sum
             # normalize
             A -= logsumexp(A, axis=0)
             B -= logsumexp(B, axis=0)
             PI -= logsumexp(PI)
 
             # check covergence
-            if last_log_likelihood is not None and abs(all_log_likelihood - last_log_likelihood) < tol:
+            if last_log_likelihood is not None and abs(all_log_likelihood - last_log_likelihood) < tol*K:
                 break
             last_log_likelihood = np.sum(log_likelihood)
 

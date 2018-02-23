@@ -5,13 +5,14 @@ from hidden_markov_model import *
 
 def main():
     ''' modify this part accordingly '''
-    NEW_MODEL = False
+    TRAIN = False
+    PREDICT = True
     train_path = 'train_data'
     test_path = 'test_data'
 
-    if NEW_MODEL:
+    if TRAIN:
         N = 10 # num of hidden states
-        M = 30 # num of observation classes
+        M = 15 # num of observation classes
         # initialization
         PI = np.ones(N)/N
         # transition
@@ -28,16 +29,17 @@ def main():
         # feature extraction and clustering
         raw = load_data(train_path)
         # TODO: extract more features?
+        # TODO: tune M at the same time, prevent too much -inf in B
         k_means(raw, M)
         cluster = cluster_data(raw)
 
         # train hmm
         hmm_train(A, B, PI, max_iter, tol, cluster)
 
-    # predict
-    raw = load_data(test_path)
-    cluster = cluster_data(raw)
-    hmm_predict(cluster)
+    if PREDICT:
+        raw = load_data(test_path)
+        cluster = cluster_data(raw)
+        hmm_predict(cluster)
 
 def load_data(path):
     data = {}
@@ -81,9 +83,10 @@ def cluster_data(data):
 
 def hmm_predict(data):
     hmm_models = pickle.load(open("hmm_models.p", "rb"))
-    gestures = hmm_models.keys()
+    gestures = [key for key in hmm_models.keys()]
     filenames = [key for key in data.keys() if key is not 'gestures']
-    log_likelihood = np.zeros((len(filenames),len(gestures)))
+    instances = len(filenames)
+    log_likelihood = np.zeros((instances,len(gestures)))
     for j, gesture in enumerate(gestures):
         # extract params
         prior = hmm_models[gesture]['prior']
@@ -95,14 +98,13 @@ def hmm_predict(data):
             _, _, P = forward_backward(obs, transition, emission, prior)
             log_likelihood[i,j] = P
 
-    # TODO: fix prediction, all likelihood is -inf
-    prediction = gestures[np.argmax(log_likelihood, axis=1)]
+    prediction = [gestures[idx] for idx in np.argmax(log_likelihood, axis=1)]
     print('Instances: ', filenames, '\nPrediction: ', prediction)
 
     # test accuracy
-    accuracy = np.sum(prediction in filenames)/len(filenames)
-    print('test accuracy: ' ,accuracy)
-
+    correct = [prediction[idx] in filenames[idx] for idx in range(instances)]
+    accuracy = np.sum(correct)/instances
+    print('Test accuracy: ', accuracy)
 
 
 if __name__ == '__main__':
