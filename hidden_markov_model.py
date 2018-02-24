@@ -1,18 +1,18 @@
 '''
-Note: HMM calculation is in log space to prevent underflow
+Note: Baum-Welch Algorithm, calculation is in log space to prevent underflow
 '''
 import numpy as np
 import pickle
 from scipy.special import logsumexp
 
-def hmm_train(trans, emiss, init, max_iter, tol, data):
+def hmm_train(trans, emiss, init, max_iter, tol, observations, gestures):
     hmm_models = {}
     M, N = emiss.shape
-    for gesture in data['gestures']:
+    for gesture in gestures:
         A = np.log(trans)
         B = np.log(emiss)
         PI = np.log(init)
-        obs_seqs = [data[key] for key in data.keys() if gesture in key] # multiple observation sequences
+        obs_seqs = [observations[key] for key in observations.keys() if gesture in key] # multiple observation sequences
         K = len(obs_seqs)
 
         last_log_likelihood = None
@@ -95,7 +95,7 @@ def forward_backward(obs, A, B, PI):
         beta[t] = logsumexp(beta[t+1].reshape((-1,1)) + A + B[obs[t + 1]].reshape((-1,1)), axis=0)
     # termination, for debug purpose
     # Q = logsumexp(beta[0]+PI)
-    # # TODO: figure out why P != Q
+    # Note: P != Q because Q doesn't include the first observation! Thus P < Q and the difference should be small
     # print('forward log likelihood: ', P, '\tbackward log likelihood: ', Q)
 
     return alpha, beta, P

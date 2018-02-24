@@ -5,14 +5,14 @@ from hidden_markov_model import *
 
 def main():
     ''' modify this part accordingly '''
-    TRAIN = False
+    TRAIN = True
     PREDICT = True
     train_path = 'train_data'
-    test_path = 'train_data'
+    test_path = 'test_data'
 
     if TRAIN:
         N = 10 # num of hidden states
-        M = 15 # num of observation classes
+        M = 25 # num of observation classes 15 for no extraction
         # initialization
         PI = np.ones(N)/N
         # transition
@@ -27,19 +27,18 @@ def main():
         tol = 0.1
 
         # feature extraction and clustering
-        raw = load_data(train_path)
-        # TODO: extract more features?
-        # TODO: tune M at the same time, prevent too much -inf in B
-        k_means(raw, M)
-        cluster = cluster_data(raw)
+        data, gestures = load_data(train_path)
+        # TODO: extract more features, also tune M to prevent too much -inf in B and P
+        k_means(data, M)
+        observations = cluster_data(data)
 
         # train hmm
-        hmm_train(A, B, PI, max_iter, tol, cluster)
+        hmm_train(A, B, PI, max_iter, tol, observations, gestures)
 
     if PREDICT:
-        raw = load_data(test_path)
-        cluster = cluster_data(raw)
-        hmm_predict(cluster)
+        data, _ = load_data(test_path)
+        observations = cluster_data(data)
+        hmm_predict(observations)
 
 def load_data(path):
     data = {}
@@ -55,16 +54,22 @@ def load_data(path):
         # load sensor data
         raw_data = np.loadtxt(os.path.join(path, file))
 
-        data[filename] = raw_data[:,1:] # ts not used
-    data['gestures'] = gestures
-    return data
+        data[filename] = extract_features(raw_data) # ts not used
+
+    return data, gestures
+
+def extract_features(data):
+    T = data.shape[0]
+    features = np.zeros((T, 8))
+    features[:, :6] = data[:,1:]
+    features[:, 6] = np.linalg.norm(data[:, [1, 2, 3]], axis=1)  # norm
+    features[:, 7] = np.arctan2(data[:, 2], data[:, 1])  # angle
+    return features
 
 def k_means(data, K):
     # K-means on train data
     all_data = np.array([])
     for idx, key in enumerate(data):
-        if key is 'gestures':
-            continue
         if idx == 0:
             all_data = data[key]
         all_data = np.vstack((all_data,data[key]))
@@ -76,15 +81,13 @@ def cluster_data(data):
     kmeans = pickle.load(open("k_means.p", "rb"))
     # cluster observation classes
     for key, value in data.items():
-        if key is 'gestures':
-            continue
         data[key] = kmeans.predict(value)
     return data
 
-def hmm_predict(data):
+def hmm_predict(observations):
     hmm_models = pickle.load(open("hmm_models.p", "rb"))
     gestures = [key for key in hmm_models.keys()]
-    filenames = [key for key in data.keys() if key is not 'gestures']
+    filenames = [key for key in observations.keys()]
     instances = len(filenames)
     log_likelihood = np.zeros((instances,len(gestures)))
     for j, gesture in enumerate(gestures):
@@ -94,7 +97,7 @@ def hmm_predict(data):
         emission = hmm_models[gesture]['emission']
 
         for i, filename in enumerate(filenames):
-            obs = data[filename]
+            obs = observations[filename]
             _, _, P = forward_backward(obs, transition, emission, prior)
             log_likelihood[i,j] = P
 
