@@ -66,7 +66,7 @@ def hmm_train(trans, emiss, init, max_iter, tol, observations, gestures):
                 break
             last_log_likelihood = np.sum(log_likelihood)
 
-        # save hmm parameters under right gesture
+        # save hmm model for current gesture
         hmm_models[gesture] = {'prior': PI, 'transition': A, 'emission': B}
 
     # save the whole model

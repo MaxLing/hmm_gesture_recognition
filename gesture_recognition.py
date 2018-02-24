@@ -12,7 +12,7 @@ def main():
 
     if TRAIN:
         N = 10 # num of hidden states
-        M = 25 # num of observation classes 15 for no extraction
+        M = 15 # num of observation classes
         # initialization
         PI = np.ones(N)/N
         # transition
@@ -28,7 +28,7 @@ def main():
 
         # feature extraction and clustering
         data, gestures = load_data(train_path)
-        # TODO: extract more features, also tune M to prevent too much -inf in B and P
+        # TODO: extract more features, also tune M to prevent too much -inf in B and P ?
         k_means(data, M)
         observations = cluster_data(data)
 
@@ -60,10 +60,10 @@ def load_data(path):
 
 def extract_features(data):
     T = data.shape[0]
-    features = np.zeros((T, 8))
+    features = np.zeros((T, 6))
     features[:, :6] = data[:,1:]
-    features[:, 6] = np.linalg.norm(data[:, [1, 2, 3]], axis=1)  # norm
-    features[:, 7] = np.arctan2(data[:, 2], data[:, 1])  # angle
+    # features[:, 0] = np.linalg.norm(data[:, [1, 2, 3]], axis=1)  # norm
+    # features[:, 1] = np.arctan2(data[:, 2], data[:, 1])  # angle
     return features
 
 def k_means(data, K):
