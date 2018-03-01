@@ -5,7 +5,7 @@ from hidden_markov_model import *
 
 def main():
     ''' modify this part accordingly '''
-    TRAIN = True
+    TRAIN = False
     PREDICT = True
     train_path = 'train_data'
     test_path = 'test_data'
@@ -102,7 +102,8 @@ def hmm_predict(observations):
             log_likelihood[i,j] = P
 
     prediction = [gestures[idx] for idx in np.argmax(log_likelihood, axis=1)]
-    print('Instances: ', filenames, '\nPrediction: ', prediction)
+    log = np.max(log_likelihood, axis=1)
+    print('Instances: ', filenames, '\nPrediction: ', prediction, '\nLog Likelihood: ', log)
 
     # test accuracy
     correct = [prediction[idx] in filenames[idx] for idx in range(instances)]
