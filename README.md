@@ -1,4 +1,4 @@
-# Upenn ESE650 Learning in Robotics, Project3
+# UPenn ESE650 Learning in Robotics, Project 3
 
 1. Put training data .txt file into folder .\train_data  
    Put testing data .txt file into folder .\test_data  
